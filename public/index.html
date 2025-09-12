@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Location Share - User/Worker Portal</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗺️ Location Share Portal</h1>
+            <p>Connect users with workers in real-time</p>
+        </div>
+
+        <!-- Role Selection Screen -->
+        <div id="roleSelection" class="role-selection">
+            <div class="card">
+                <h2>Choose Your Role</h2>
+                <div class="role-options">
+                    <div class="role-option" onclick="selectRole('user')">
+                        <div class="role-icon">👤</div>
+                        <h3>User</h3>
+                        <p>I need help or services</p>
+                    </div>
+                    <div class="role-option" onclick="selectRole('worker')">
+                        <div class="role-icon">👷</div>
+                        <h3>Worker</h3>
+                        <p>I provide help or services</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main App Screen -->
+        <div id="mainApp" class="main-app" style="display: none;">
+            <div class="user-info">
+                <h2 id="userRole">Role</h2>
+                <p>Welcome, <span id="userName">User</span>!</p>
+                <button class="btn btn-secondary" onclick="changeRole()">Change Role</button>
+            </div>
+
+            <div class="main-content">
+                <div class="card">
+                    <h2>📍 My Location</h2>
+                    <div class="location-info" id="myLocation">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <p>Getting your location...</p>
+                        </div>
+                    </div>
+                    <div class="location-actions">
+                        <button class="btn btn-primary" onclick="startLocationSharing()">Start Sharing</button>
+                        <button class="btn btn-secondary" onclick="stopLocationSharing()">Stop Sharing</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2 id="otherRoleTitle">👷 Workers</h2>
+                    <div id="otherLocations" class="locations-list">
+                        <p class="no-data">No locations available</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="map-container">
+                <div id="map"></div>
+                <div class="map-controls">
+                    <button class="btn btn-secondary" onclick="refreshLocations()">Refresh</button>
+                    <button class="btn btn-secondary" onclick="clearMap()">Clear Map</button>
+                </div>
+                <div class="map-info" id="mapInfo" style="display: none;">
+                    <div class="distance-info">
+                        <span>Active <span id="activeCount">0</span> locations</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC-3TDkatnM1qEXqR-5FN_ogxjbLqt8Tqg&callback=initMap"></script>
+</body>
+</html>
+```
+
+```
+
