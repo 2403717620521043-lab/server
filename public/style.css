@@ -290,6 +290,89 @@ body {
     font-weight: 600;
 }
 
+.request-notification {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    z-index: 10000;
+    max-width: 300px;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.request-content h3 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    font-size: 1.2rem;
+}
+
+.request-content p {
+    margin: 0 0 1rem 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.request-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.request-section {
+    min-height: 100px;
+}
+
+.request-status {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+}
+
+.request-status h3 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.request-status p {
+    margin: 0 0 1rem 0;
+    color: #666;
+}
+
+.status-pending {
+    color: #ffc107;
+    font-weight: 600;
+}
+
+.status-accepted {
+    color: #28a745;
+    font-weight: 600;
+}
+
+.status-cancelled {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.status-completed {
+    color: #6c757d;
+    font-weight: 600;
+}
+
 @media (max-width: 768px) {
     .container {
         padding: 1rem;

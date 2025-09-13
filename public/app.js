@@ -6,6 +6,8 @@ let myLocation = null;
 let currentRole = null;
 let currentName = null;
 let isSharing = false;
+let currentRequest = null;
+let routePolyline = null;
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', function() {
@@ -37,6 +39,30 @@ document.addEventListener('DOMContentLoaded', function() {
             updateLocationsList();
         });
         
+        socket.on('new-request', function(data) {
+            showRequestNotification(data);
+        });
+        
+        socket.on('request-created', function(data) {
+            currentRequest = data;
+            showMessage('Request sent! Waiting for worker to accept...', 'success');
+            updateRequestUI();
+        });
+        
+        socket.on('request-accepted', function(data) {
+            currentRequest = { ...currentRequest, status: 'accepted', ...data };
+            showMessage('Request accepted! Route will be displayed.', 'success');
+            showRoute(data.userLat, data.userLng, data.workerLat, data.workerLng);
+            updateRequestUI();
+        });
+        
+        socket.on('request-cancelled', function(data) {
+            currentRequest = null;
+            clearRoute();
+            showMessage('Request cancelled', 'success');
+            updateRequestUI();
+        });
+        
         socket.on('error', function(data) {
             showMessage(data.message, 'error');
         });
@@ -66,6 +92,7 @@ function changeRole() {
     document.getElementById('roleSelection').style.display = 'flex';
     document.getElementById('mainApp').style.display = 'none';
     stopLocationSharing();
+    clearRequest();
 }
 
 function showMainApp() {
@@ -80,6 +107,7 @@ function showMainApp() {
     
     getCurrentLocation();
     loadOtherLocations();
+    updateRequestUI();
 }
 
 function getCurrentLocation() {
@@ -212,6 +240,14 @@ function addLocationToMap(location) {
                     Lat: ${location.latitude.toFixed(6)}<br>
                     Lng: ${location.longitude.toFixed(6)}
                 </p>
+                ${currentRole === 'user' && location.role === 'worker' ? 
+                    `<button class="btn btn-small btn-primary" onclick="sendRequest('${location.id}')" style="margin-top: 10px;">Send Request</button>` : 
+                    ''
+                }
+                ${currentRole === 'worker' && location.role === 'user' ? 
+                    `<button class="btn btn-small btn-success" onclick="acceptRequest('${location.id}')" style="margin-top: 10px;">Accept Request</button>` : 
+                    ''
+                }
             </div>
         `
     });
@@ -236,6 +272,141 @@ function addLocationToMap(location) {
     updateMapInfo();
 }
 
+function sendRequest(workerId) {
+    if (!myLocation) {
+        showMessage('Please enable location sharing first.', 'error');
+        return;
+    }
+    
+    socket.emit('create-request', { workerId });
+}
+
+function acceptRequest(userId) {
+    // This will be handled by the server when a request is created
+    showMessage('Request accepted!', 'success');
+}
+
+function showRequestNotification(data) {
+    if (currentRole === 'worker') {
+        const notification = document.createElement('div');
+        notification.className = 'request-notification';
+        notification.innerHTML = `
+            <div class="request-content">
+                <h3>New Request from ${data.userName}</h3>
+                <p>Location: ${data.userLat.toFixed(4)}, ${data.userLng.toFixed(4)}</p>
+                <div class="request-actions">
+                    <button class="btn btn-success" onclick="acceptRequestById(${data.requestId})">Accept</button>
+                    <button class="btn btn-secondary" onclick="dismissNotification(this)">Dismiss</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto-dismiss after 30 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 30000);
+    }
+}
+
+function acceptRequestById(requestId) {
+    socket.emit('accept-request', { requestId });
+    dismissNotification(document.querySelector('.request-notification'));
+}
+
+function dismissNotification(element) {
+    if (element && element.parentNode) {
+        element.remove();
+    }
+}
+
+function showRoute(userLat, userLng, workerLat, workerLng) {
+    if (!map) return;
+    
+    // Clear existing route
+    clearRoute();
+    
+    // Create directions service
+    const directionsService = new google.maps.DirectionsService();
+    const directionsRenderer = new google.maps.DirectionsRenderer({
+        suppressMarkers: true,
+        polylineOptions: {
+            strokeColor: '#667eea',
+            strokeWeight: 4,
+            strokeOpacity: 0.8
+        }
+    });
+    
+    directionsRenderer.setMap(map);
+    
+    // Calculate route
+    directionsService.route({
+        origin: { lat: userLat, lng: userLng },
+        destination: { lat: workerLat, lng: workerLng },
+        travelMode: google.maps.TravelMode.DRIVING
+    }, function(result, status) {
+        if (status === 'OK') {
+            directionsRenderer.setDirections(result);
+            routePolyline = directionsRenderer;
+            
+            // Fit map to show the route
+            const bounds = new google.maps.LatLngBounds();
+            result.routes[0].legs[0].steps.forEach(step => {
+                bounds.extend(step.start_location);
+                bounds.extend(step.end_location);
+            });
+            map.fitBounds(bounds);
+            
+            showMessage('Route calculated successfully!', 'success');
+        } else {
+            console.error('Directions request failed:', status);
+            showMessage('Failed to calculate route', 'error');
+        }
+    });
+}
+
+function clearRoute() {
+    if (routePolyline) {
+        routePolyline.setMap(null);
+        routePolyline = null;
+    }
+}
+
+function updateRequestUI() {
+    const requestSection = document.getElementById('requestSection');
+    if (!requestSection) return;
+    
+    if (currentRequest) {
+        requestSection.innerHTML = `
+            <div class="request-status">
+                <h3>Current Request</h3>
+                <p>Status: <span class="status-${currentRequest.status}">${currentRequest.status.toUpperCase()}</span></p>
+                ${currentRequest.status === 'pending' ? 
+                    '<button class="btn btn-danger" onclick="cancelRequest()">Cancel Request</button>' : 
+                    '<button class="btn btn-secondary" onclick="clearRequest()">Clear</button>'
+                }
+            </div>
+        `;
+    } else {
+        requestSection.innerHTML = '<p class="no-data">No active requests</p>';
+    }
+}
+
+function cancelRequest() {
+    if (currentRequest) {
+        socket.emit('cancel-request', { requestId: currentRequest.requestId });
+    }
+}
+
+function clearRequest() {
+    currentRequest = null;
+    clearRoute();
+    updateRequestUI();
+}
+
 function removeLocationFromMap(locationId) {
     const index = markers.findIndex(m => m.id === locationId);
     if (index !== -1) {
@@ -256,6 +427,7 @@ function clearMap() {
         }
     });
     markers = [];
+    clearRoute();
     updateMapInfo();
 }
 
